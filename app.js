@@ -1,10 +1,15 @@
 const express = require('express');
 const cors = require('cors');
 const pool = require('./src/db');
+const productosRoutes = require('./src/routes/productos');
+const authRoutes = require('./src/routes/auth');
 
 const app = express();
-app.use(cors());
 app.use(express.json());
+app.use(cors());
+
+app.use('/api/productos', productosRoutes);
+app.use('/api', authRoutes);
 
 app.get('/', (req, res) => res.send('API funcionando'));
 
