@@ -3,6 +3,16 @@ const router = express.Router();
 const pool = require('../db');
 const { isAuthenticated, authorizeRoles } = require('../middleware/authMiddleware');
 
+// Obtener todos los productos
+router.get('/', async (req, res) => {
+  try {
+    const result = await pool.query('SELECT * FROM productos');
+    res.json(result.rows);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // Crear producto (solo admin_local)
 router.post('/', isAuthenticated, authorizeRoles('admin_local'), async (req, res) => {
   const {
@@ -11,16 +21,16 @@ router.post('/', isAuthenticated, authorizeRoles('admin_local'), async (req, res
     ubicacion,
     stock_maximo,
     cantidad_stock,
-    proveedor,
+    proveedor_id,
     precio_compra,
     precio_venta
   } = req.body;
 
   try {
     const result = await pool.query(
-      `INSERT INTO productos (codigo, descripcion, ubicacion, stock_maximo, cantidad_stock, proveedor, precio_compra, precio_venta)
+      `INSERT INTO productos (codigo, descripcion, ubicacion, stock_maximo, cantidad_stock, proveedor_id, precio_compra, precio_venta)
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *`,
-      [codigo, descripcion, ubicacion, stock_maximo, cantidad_stock, proveedor, precio_compra, precio_venta]
+      [codigo, descripcion, ubicacion, stock_maximo, cantidad_stock, proveedor_id, precio_compra, precio_venta]
     );
     res.status(201).json(result.rows[0]);
   } catch (err) {
