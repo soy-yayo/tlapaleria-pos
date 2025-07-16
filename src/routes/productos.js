@@ -13,6 +13,19 @@ router.get('/', async (req, res) => {
   }
 });
 
+// Obtener producto por ID
+router.get('/:id', async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    const result = await pool.query('SELECT * FROM productos WHERE id = $1', [id]);
+    if (result.rows.length === 0) return res.status(404).json({ error: 'Producto no encontrado' });
+    res.json(result.rows[0]);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // Crear producto (solo admin_local)
 router.post('/', isAuthenticated, authorizeRoles('admin_local'), async (req, res) => {
   const {
@@ -46,7 +59,8 @@ router.put('/:id', isAuthenticated, authorizeRoles('admin_local'), async (req, r
     descripcion,
     ubicacion,
     stock_maximo,
-    proveedor,
+    cantidad_stock,
+    proveedor_id,
     precio_compra,
     precio_venta
   } = req.body;
@@ -62,12 +76,11 @@ router.put('/:id', isAuthenticated, authorizeRoles('admin_local'), async (req, r
 
     const result = await pool.query(
       `UPDATE productos 
-       SET codigo = $1, descripcion = $2, ubicacion = $3, stock_maximo = $4,
-           proveedor = $5, precio_compra = $6, precio_venta = $7
-       WHERE id = $8 RETURNING *`,
-      [codigo, descripcion, ubicacion, stock_maximo, proveedor, precio_compra, precio_venta, id]
+       SET codigo = $1, descripcion = $2, ubicacion = $3, stock_maximo = $4, cantidad_stock = $5,
+           proveedor_id = $6, precio_compra = $7, precio_venta = $8
+       WHERE id = $9 RETURNING *`,
+      [codigo, descripcion, ubicacion, stock_maximo, cantidad_stock, proveedor_id, precio_compra, precio_venta, id]
     );
-
     res.json(result.rows[0]);
   } catch (err) {
     res.status(500).json({ error: err.message });
