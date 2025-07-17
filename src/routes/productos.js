@@ -6,7 +6,9 @@ const { isAuthenticated, authorizeRoles } = require('../middleware/authMiddlewar
 // Obtener todos los productos
 router.get('/', async (req, res) => {
   try {
-    const result = await pool.query('SELECT * FROM productos');
+    const result = await pool.query(`SELECT productos.*, proveedores.nombre AS nombre_proveedor
+      FROM productos
+      JOIN proveedores ON productos.proveedor_id = proveedores.id`);
     res.json(result.rows);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -36,14 +38,15 @@ router.post('/', isAuthenticated, authorizeRoles('admin_local'), async (req, res
     cantidad_stock,
     proveedor_id,
     precio_compra,
-    precio_venta
+    precio_venta,
+    imagen
   } = req.body;
 
   try {
     const result = await pool.query(
-      `INSERT INTO productos (codigo, descripcion, ubicacion, stock_maximo, cantidad_stock, proveedor_id, precio_compra, precio_venta)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *`,
-      [codigo, descripcion, ubicacion, stock_maximo, cantidad_stock, proveedor_id, precio_compra, precio_venta]
+      `INSERT INTO productos (codigo, descripcion, ubicacion, stock_maximo, cantidad_stock,  precio_compra, precio_venta, proveedor_id, imagen)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING *`,
+      [codigo, descripcion, ubicacion, stock_maximo, cantidad_stock, precio_compra, precio_venta, proveedor_id, imagen]
     );
     res.status(201).json(result.rows[0]);
   } catch (err) {
@@ -62,7 +65,8 @@ router.put('/:id', isAuthenticated, authorizeRoles('admin_local'), async (req, r
     cantidad_stock,
     proveedor_id,
     precio_compra,
-    precio_venta
+    precio_venta,
+    imagen
   } = req.body;
 
   try {
@@ -77,9 +81,9 @@ router.put('/:id', isAuthenticated, authorizeRoles('admin_local'), async (req, r
     const result = await pool.query(
       `UPDATE productos 
        SET codigo = $1, descripcion = $2, ubicacion = $3, stock_maximo = $4, cantidad_stock = $5,
-           proveedor_id = $6, precio_compra = $7, precio_venta = $8
-       WHERE id = $9 RETURNING *`,
-      [codigo, descripcion, ubicacion, stock_maximo, cantidad_stock, proveedor_id, precio_compra, precio_venta, id]
+           proveedor_id = $6, precio_compra = $7, precio_venta = $8, imagen = $9
+       WHERE id = $10 RETURNING *`,
+      [codigo, descripcion, ubicacion, stock_maximo, cantidad_stock, proveedor_id, precio_compra, precio_venta, imagen, id]
     );
     res.json(result.rows[0]);
   } catch (err) {
