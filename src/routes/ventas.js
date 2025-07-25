@@ -1,7 +1,32 @@
 const express = require('express');
 const router = express.Router();
 const pool = require('../db');
-const { isAuthenticated, authorizeRoles } = require('../middleware/authMiddleware');
+const { isAuthenticated } = require('../middleware/authMiddleware');
+
+// Obtener ventas con detalles básicos
+router.get('/ventas', isAuthenticated, async (req, res) => {
+  const result = await pool.query(`
+    SELECT v.id, v.fecha, v.total, v.forma_pago, u.usuario
+    FROM ventas v
+    JOIN usuarios u ON u.id = v.usuario_id
+    ORDER BY v.fecha DESC
+  `);
+  res.json(result.rows);
+});
+
+router.get('/ventas/:id', isAuthenticated, async (req, res) => {
+  const ventaId = req.params.id;
+
+  const productos = await pool.query(`
+    SELECT p.descripcion, dv.cantidad, dv.precio_unitario
+    FROM detalle_venta dv
+    JOIN productos p ON p.id = dv.producto_id
+    WHERE dv.venta_id = $1
+  `, [ventaId]);
+
+  res.json(productos.rows);
+});
+
 
 router.post('/ventas', async (req, res) => {
   const { forma_pago, productos, usuario_id } = req.body;
