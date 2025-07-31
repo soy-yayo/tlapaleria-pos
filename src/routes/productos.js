@@ -29,7 +29,7 @@ router.get('/:id', async (req, res) => {
 });
 
 // Crear producto (solo admin_local)
-router.post('/', isAuthenticated, authorizeRoles('admin_local'), async (req, res) => {
+router.post('/', isAuthenticated, authorizeRoles('admin'), async (req, res) => {
   const {
     codigo,
     descripcion,
@@ -55,7 +55,7 @@ router.post('/', isAuthenticated, authorizeRoles('admin_local'), async (req, res
 });
 
 // Editar producto (solo admin_local, si no tiene stock)
-router.put('/:id', isAuthenticated, authorizeRoles('admin_local'), async (req, res) => {
+router.put('/:id', isAuthenticated, authorizeRoles('admin'), async (req, res) => {
   const { id } = req.params;
   const {
     codigo,
@@ -92,7 +92,7 @@ router.put('/:id', isAuthenticated, authorizeRoles('admin_local'), async (req, r
 });
 
 // Eliminar producto (solo admin_local, si no tiene stock)
-router.delete('/:id', isAuthenticated, authorizeRoles('admin_local'), async (req, res) => {
+router.delete('/:id', isAuthenticated, authorizeRoles('admin'), async (req, res) => {
   const { id } = req.params;
 
   try {
