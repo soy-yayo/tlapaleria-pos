@@ -4,6 +4,14 @@ const pool = require('../db');
 const bcrypt = require('bcrypt');
 const { isAuthenticated, authorizeRoles } = require('../middleware/authMiddleware');
 
+router.get('/', isAuthenticated, authorizeRoles('admin'), async (req, res) => {
+  try {
+    const usuarios = await pool.query('SELECT * FROM usuarios');
+    res.json(usuarios.rows);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
 
 router.post('/', isAuthenticated, authorizeRoles('admin'), async (req, res) => {
   const { nombre, usuario, contraseña, rol } = req.body;
@@ -27,8 +35,19 @@ router.post('/', isAuthenticated, authorizeRoles('admin'), async (req, res) => {
 
     res.status(201).json({ message: 'Usuario registrado correctamente' });
   } catch (err) {
-    console.error('Error al registrar usuario:', err); 
+    console.error('Error al registrar usuario:', err);
     res.status(500).json({ error: 'Error interno del servidor' });
+  }
+});
+
+router.delete('/:id', isAuthenticated, authorizeRoles('admin'), async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    await pool.query('DELETE FROM usuarios WHERE id = $1', [id]);
+    res.json({ message: 'Usuario eliminado correctamente' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
   }
 });
 
