@@ -13,6 +13,39 @@ router.get('/', isAuthenticated, authorizeRoles('admin'), async (req, res) => {
   }
 });
 
+router.get('/:id', isAuthenticated, authorizeRoles('admin'), async (req, res) => {
+  const { id } = req.params;
+
+
+  try {
+    const user = await pool.query(`SELECT * FROM usuarios WHERE id = $1`, [id]);
+    res.json(user.rows[0]);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.put('/:id', isAuthenticated, authorizeRoles('admin'), async (req, res) => {
+  const { id } = req.params;
+  const {
+    nombre,
+    usuario,
+    rol
+  } = req.body;
+
+  try {
+    const result = await pool.query(
+      `UPDATE usuarios 
+       SET nombre = $1, usuario = $2, rol = $3,
+       WHERE id = $4 RETURNING *`,
+      [nombre, usuario, rol, activo, id]
+    );
+    res.json(result.rows[0]);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 router.post('/', isAuthenticated, authorizeRoles('admin'), async (req, res) => {
   const { nombre, usuario, contraseña, rol } = req.body;
 
