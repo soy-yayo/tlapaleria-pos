@@ -6,10 +6,12 @@ const authRoutes = require('./src/routes/auth');
 const proveedoresRoutes = require('./src/routes/proveedores');
 const ventasRoutes = require('./src/routes/ventas');
 const userRouter = require('./src/routes/usuarios');
+const path = require('path');
 
 const app = express();
 app.use(cors());
 app.use(express.json());
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 app.use('/api/productos', productosRoutes);
 app.use('/api', authRoutes);
