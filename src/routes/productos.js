@@ -7,8 +7,10 @@ const { isAuthenticated, authorizeRoles } = require('../middleware/authMiddlewar
 router.get('/', async (req, res) => {
   try {
     const result = await pool.query(`SELECT productos.*, proveedores.nombre AS nombre_proveedor
-      FROM productos
-      JOIN proveedores ON productos.proveedor_id = proveedores.id`);
+FROM productos
+JOIN proveedores ON productos.proveedor_id = proveedores.id
+WHERE productos.activo = TRUE;
+`);
     res.json(result.rows);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -103,7 +105,8 @@ router.delete('/:id', isAuthenticated, authorizeRoles('admin'), async (req, res)
       return res.status(400).json({ error: 'No se puede eliminar productos con stock mayor a 0' });
     }
 
-    await pool.query('DELETE FROM productos WHERE id = $1', [id]);
+    // await pool.query('DELETE FROM productos WHERE id = $1', [id]);
+    await pool.query('UPDATE productos SET activo = false WHERE id = $1', [id]);
     res.json({ message: 'Producto eliminado correctamente' });
   } catch (err) {
     res.status(500).json({ error: err.message });
