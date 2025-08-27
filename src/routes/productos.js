@@ -44,8 +44,8 @@ router.post('/', isAuthenticated, authorizeRoles('admin'), upload.single('imagen
     precio_venta
   } = req.body;
   try {
-    const serverUrl = "http://localhost:3000";
-    const imagen = req.file ? `${serverUrl}/uploads/${req.file.filename}` : null;
+    // const serverUrl = "http://localhost:3000";
+    const imagen = req.file ? `/uploads/${req.file.filename}` : null;
 
     const result = await pool.query(
       `INSERT INTO productos (codigo, descripcion, ubicacion, stock_maximo, cantidad_stock,  precio_compra, precio_venta, proveedor_id, imagen)
