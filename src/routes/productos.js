@@ -81,8 +81,8 @@ router.put('/:id', isAuthenticated, authorizeRoles('admin'), upload.single('imag
     //   return res.status(400).json({ error: 'No se puede editar productos con stock mayor a 0' });
     // }
 
-    const serverUrl = "http://localhost:3000";
-    const nuevaImagen = req.file ? `${serverUrl}/uploads/${req.file.filename}` : null;
+    // const serverUrl = "http://localhost:3000";
+    const nuevaImagen = req.file ? `/uploads/${req.file.filename}` : null;
 
     const result = await pool.query(
       `UPDATE productos 
