@@ -106,12 +106,12 @@ router.delete('/:id', isAuthenticated, authorizeRoles('admin'), async (req, res)
     const check = await pool.query('SELECT cantidad_stock FROM productos WHERE id = $1', [id]);
     if (check.rows.length === 0) return res.status(404).json({ error: 'Producto no encontrado' });
 
-    if (check.rows[0].cantidad_stock > 0) {
-      return res.status(400).json({ error: 'No se puede eliminar productos con stock mayor a 0' });
-    }
+    // if (check.rows[0].cantidad_stock > 0) {
+    //   return res.status(400).json({ error: 'No se puede eliminar productos con stock mayor a 0' });
+    // }
 
-    // await pool.query('DELETE FROM productos WHERE id = $1', [id]);
-    await pool.query('UPDATE productos SET activo = false WHERE id = $1', [id]);
+    await pool.query('DELETE FROM productos WHERE id = $1', [id]);
+    // await pool.query('UPDATE productos SET activo = false WHERE id = $1', [id]);
     res.json({ message: 'Producto eliminado correctamente' });
   } catch (err) {
     res.status(500).json({ error: err.message });
