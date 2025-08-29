@@ -47,6 +47,12 @@ router.post('/', isAuthenticated, authorizeRoles('admin'), upload.single('imagen
     // const serverUrl = "http://localhost:3000";
     const imagen = req.file ? `/uploads/${req.file.filename}` : null;
 
+    const producto_existente = await pool.query('SELECT * FROM productos WHERE codigo = $1', [codigo]);
+
+    if (producto_existente.rows.length > 0) {
+      return res.status(400).json({ error: 'El producto ya existe' });
+    }
+
     const result = await pool.query(
       `INSERT INTO productos (codigo, descripcion, ubicacion, stock_maximo, cantidad_stock,  precio_compra, precio_venta, proveedor_id, imagen)
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING *`,
@@ -73,22 +79,24 @@ router.put('/:id', isAuthenticated, authorizeRoles('admin'), upload.single('imag
   } = req.body;
 
   try {
-    // Verificar si el producto tiene stock
     const check = await pool.query('SELECT cantidad_stock FROM productos WHERE id = $1', [id]);
     if (check.rows.length === 0) return res.status(404).json({ error: 'Producto no encontrado' });
 
-    // if (check.rows[0].cantidad_stock > 0) {
-    //   return res.status(400).json({ error: 'No se puede editar productos con stock mayor a 0' });
-    // }
+    const codigoExistente = await pool.query(
+      'SELECT id FROM productos WHERE codigo = $1 AND id <> $2',
+      [codigo, id]
+    );
+    if (codigoExistente.rows.length > 0) {
+      return res.status(400).json({ error: 'El código ya está registrado en otro producto' });
+    }
 
-    // const serverUrl = "http://localhost:3000";
     const nuevaImagen = req.file ? `/uploads/${req.file.filename}` : null;
 
     const result = await pool.query(
       `UPDATE productos 
        SET codigo = $1, descripcion = $2, ubicacion = $3, stock_maximo = $4, cantidad_stock = $5,
            proveedor_id = $6, precio_compra = $7, precio_venta = $8,
-           imagen = COALESCE($9, imagen)   -- 👈 si $9 es null, conserva la anterior
+           imagen = COALESCE($9, imagen)
        WHERE id = $10 RETURNING *`,
       [codigo, descripcion, ubicacion, stock_maximo, cantidad_stock, proveedor_id, precio_compra, precio_venta, nuevaImagen, id]
     );
