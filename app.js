@@ -6,6 +6,7 @@ const authRoutes = require('./src/routes/auth');
 const proveedoresRoutes = require('./src/routes/proveedores');
 const ventasRoutes = require('./src/routes/ventas');
 const userRouter = require('./src/routes/usuarios');
+const reportesRoute = require('./src/routes/reportes');
 const path = require('path');
 
 const app = express();
