@@ -19,7 +19,7 @@ app.use('/api', authRoutes);
 app.use('/api/proveedores', proveedoresRoutes);
 app.use('/api', ventasRoutes);
 app.use('/api/usuarios', userRouter);
-
+app.use('/api/reportes', reportesRoute);
 
 app.get('/', (req, res) => res.send('API funcionando'));
 
