@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const pool = require('../db');
-const { isAuthenticated, authorizeRoles } = require('../middlewares/authMiddleware');
+const { isAuthenticated, authorizeRoles } = require('../middleware/authMiddleware');
 
 router.get(
   '/corte-caja',
