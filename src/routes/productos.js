@@ -7,11 +7,17 @@ const upload = require('../middleware/upload');
 // Obtener todos los productos
 router.get('/', async (req, res) => {
   try {
-    const result = await pool.query(`SELECT productos.*, proveedores.nombre AS nombre_proveedor
-FROM productos
-JOIN proveedores ON productos.proveedor_id = proveedores.id
-WHERE productos.activo = TRUE;
-`);
+    const result = await pool.query(`
+      SELECT p.id, p.codigo, p.descripcion, p.ubicacion, p.stock_maximo, p.cantidad_stock,
+             p.precio_compra,
+             COALESCE(p.precio_venta, calc_precio_venta(p.precio_compra)) AS precio_venta,
+             pr.nombre AS nombre_proveedor,
+             p.imagen, p.activo
+      FROM productos p
+      JOIN proveedores pr ON p.proveedor_id = pr.id
+      WHERE p.activo = TRUE
+      ORDER BY p.descripcion ASC
+    `);
     res.json(result.rows);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -40,29 +46,30 @@ router.post('/', isAuthenticated, authorizeRoles('admin'), upload.single('imagen
     stock_maximo,
     cantidad_stock,
     proveedor_id,
-    precio_compra,
-    precio_venta
+    precio_compra
   } = req.body;
+
   try {
-    // const serverUrl = "http://localhost:3000";
     const imagen = req.file ? `/uploads/${req.file.filename}` : null;
 
-    const producto_existente = await pool.query('SELECT * FROM productos WHERE codigo = $1', [codigo]);
-
+    const producto_existente = await pool.query('SELECT 1 FROM productos WHERE codigo = $1', [codigo]);
     if (producto_existente.rows.length > 0) {
       return res.status(400).json({ error: 'El producto ya existe' });
     }
 
     const result = await pool.query(
-      `INSERT INTO productos (codigo, descripcion, ubicacion, stock_maximo, cantidad_stock,  precio_compra, precio_venta, proveedor_id, imagen)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING *`,
-      [codigo, descripcion, ubicacion, stock_maximo, cantidad_stock, precio_compra, precio_venta, proveedor_id, imagen]
+      `INSERT INTO productos (codigo, descripcion, ubicacion, stock_maximo, cantidad_stock, precio_compra, proveedor_id, imagen)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8)
+       RETURNING *`,
+      [codigo, descripcion, ubicacion, stock_maximo, cantidad_stock, precio_compra, proveedor_id, imagen]
     );
+
     res.status(201).json(result.rows[0]);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
+
 
 // Editar producto (solo admin_local, si no tiene stock)
 router.put('/:id', isAuthenticated, authorizeRoles('admin'), upload.single('imagen'), async (req, res) => {
@@ -74,12 +81,11 @@ router.put('/:id', isAuthenticated, authorizeRoles('admin'), upload.single('imag
     stock_maximo,
     cantidad_stock,
     proveedor_id,
-    precio_compra,
-    precio_venta
+    precio_compra
   } = req.body;
 
   try {
-    const check = await pool.query('SELECT cantidad_stock FROM productos WHERE id = $1', [id]);
+    const check = await pool.query('SELECT id FROM productos WHERE id = $1', [id]);
     if (check.rows.length === 0) return res.status(404).json({ error: 'Producto no encontrado' });
 
     const codigoExistente = await pool.query(
@@ -93,13 +99,15 @@ router.put('/:id', isAuthenticated, authorizeRoles('admin'), upload.single('imag
     const nuevaImagen = req.file ? `/uploads/${req.file.filename}` : null;
 
     const result = await pool.query(
-      `UPDATE productos 
-       SET codigo = $1, descripcion = $2, ubicacion = $3, stock_maximo = $4, cantidad_stock = $5,
-           proveedor_id = $6, precio_compra = $7, precio_venta = $8,
-           imagen = COALESCE($9, imagen)
-       WHERE id = $10 RETURNING *`,
-      [codigo, descripcion, ubicacion, stock_maximo, cantidad_stock, proveedor_id, precio_compra, precio_venta, nuevaImagen, id]
+      `UPDATE productos
+       SET codigo=$1, descripcion=$2, ubicacion=$3, stock_maximo=$4, cantidad_stock=$5,
+           proveedor_id=$6, precio_compra=$7,
+           imagen = COALESCE($8, imagen)
+       WHERE id=$9
+       RETURNING *`,
+      [codigo, descripcion, ubicacion, stock_maximo, cantidad_stock, proveedor_id, precio_compra, nuevaImagen, id]
     );
+
     res.json(result.rows[0]);
   } catch (err) {
     res.status(500).json({ error: err.message });

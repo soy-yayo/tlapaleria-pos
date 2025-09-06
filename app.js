@@ -7,6 +7,7 @@ const proveedoresRoutes = require('./src/routes/proveedores');
 const ventasRoutes = require('./src/routes/ventas');
 const userRouter = require('./src/routes/usuarios');
 const reportesRoute = require('./src/routes/reportes');
+const rangosRoutes = require('./src/routes/rangos');
 const path = require('path');
 
 const app = express();
@@ -20,6 +21,7 @@ app.use('/api/proveedores', proveedoresRoutes);
 app.use('/api', ventasRoutes);
 app.use('/api/usuarios', userRouter);
 app.use('/api/reportes', reportesRoute);
+app.use('/api/rangos', rangosRoutes);
 
 app.get('/', (req, res) => res.send('API funcionando'));
 
