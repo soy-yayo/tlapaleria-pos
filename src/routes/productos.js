@@ -12,7 +12,7 @@ router.get('/', async (req, res) => {
              p.precio_compra,
              COALESCE(p.precio_venta, calc_precio_venta(p.precio_compra)) AS precio_venta,
              pr.nombre AS nombre_proveedor,
-             p.imagen, p.activo
+             p.imagen, p.activo, p.clave_sat
       FROM productos p
       JOIN proveedores pr ON p.proveedor_id = pr.id
       WHERE p.activo = TRUE
@@ -46,7 +46,8 @@ router.post('/', isAuthenticated, authorizeRoles('admin'), upload.single('imagen
     stock_maximo,
     cantidad_stock,
     proveedor_id,
-    precio_compra
+    precio_compra,
+    clave_sat
   } = req.body;
 
   try {
@@ -58,10 +59,10 @@ router.post('/', isAuthenticated, authorizeRoles('admin'), upload.single('imagen
     }
 
     const result = await pool.query(
-      `INSERT INTO productos (codigo, descripcion, ubicacion, stock_maximo, cantidad_stock, precio_compra, proveedor_id, imagen)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8)
+      `INSERT INTO productos (codigo, descripcion, ubicacion, stock_maximo, cantidad_stock, precio_compra, proveedor_id, imagen, clave_sat)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8, $9)
        RETURNING *`,
-      [codigo, descripcion, ubicacion, stock_maximo, cantidad_stock, precio_compra, proveedor_id, imagen]
+      [codigo, descripcion, ubicacion, stock_maximo, cantidad_stock, precio_compra, proveedor_id, imagen, clave_sat]
     );
 
     res.status(201).json(result.rows[0]);
@@ -81,7 +82,8 @@ router.put('/:id', isAuthenticated, authorizeRoles('admin'), upload.single('imag
     stock_maximo,
     cantidad_stock,
     proveedor_id,
-    precio_compra
+    precio_compra,
+    clave_sat
   } = req.body;
 
   try {
@@ -102,10 +104,11 @@ router.put('/:id', isAuthenticated, authorizeRoles('admin'), upload.single('imag
       `UPDATE productos
        SET codigo=$1, descripcion=$2, ubicacion=$3, stock_maximo=$4, cantidad_stock=$5,
            proveedor_id=$6, precio_compra=$7,
-           imagen = COALESCE($8, imagen)
-       WHERE id=$9
+           imagen = COALESCE($8, imagen),
+           clave_sat = COALESCE($9, clave_sat)
+       WHERE id=$10
        RETURNING *`,
-      [codigo, descripcion, ubicacion, stock_maximo, cantidad_stock, proveedor_id, precio_compra, nuevaImagen, id]
+      [codigo, descripcion, ubicacion, stock_maximo, cantidad_stock, proveedor_id, precio_compra, nuevaImagen, clave_sat, id]
     );
 
     res.json(result.rows[0]);
