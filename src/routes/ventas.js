@@ -6,7 +6,7 @@ const { isAuthenticated, authorizeRoles } = require('../middleware/authMiddlewar
 // Obtener ventas con detalles básicos
 router.get('/ventas', isAuthenticated, async (req, res) => {
   const result = await pool.query(`
-    SELECT v.id, v.fecha, v.total, v.forma_pago, u.usuario
+    SELECT v.id, v.fecha, v.total, v.forma_pago, u.usuario, u.nombre as nombre_vendedor
     FROM ventas v
     JOIN usuarios u ON u.id = v.usuario_id
     ORDER BY v.fecha DESC
