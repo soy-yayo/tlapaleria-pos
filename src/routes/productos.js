@@ -4,12 +4,12 @@ const pool = require('../db');
 const { isAuthenticated, authorizeRoles } = require('../middleware/authMiddleware');
 const upload = require('../middleware/upload');
 
-// Obtener todos los productos
 router.get('/', async (req, res) => {
   try {
     const result = await pool.query(`
       SELECT p.id, p.codigo, p.descripcion, p.ubicacion, p.stock_maximo, p.cantidad_stock,
              p.precio_compra,
+             GREATEST(p.stock_maximo - p.cantidad_stock, 0) AS stock_faltante,
              COALESCE(p.precio_venta, calc_precio_venta(p.precio_compra)) AS precio_venta,
              pr.nombre AS nombre_proveedor,
              p.imagen, p.activo, p.clave_sat
@@ -24,10 +24,8 @@ router.get('/', async (req, res) => {
   }
 });
 
-// Obtener producto por ID
 router.get('/:id', async (req, res) => {
   const { id } = req.params;
-
   try {
     const result = await pool.query('SELECT * FROM productos WHERE id = $1', [id]);
     if (result.rows.length === 0) return res.status(404).json({ error: 'Producto no encontrado' });
@@ -37,7 +35,6 @@ router.get('/:id', async (req, res) => {
   }
 });
 
-// Crear producto (solo admin_local)
 router.post('/', isAuthenticated, authorizeRoles('admin'), upload.single('imagen'), async (req, res) => {
   const {
     codigo,
@@ -52,27 +49,22 @@ router.post('/', isAuthenticated, authorizeRoles('admin'), upload.single('imagen
 
   try {
     const imagen = req.file ? `/uploads/${req.file.filename}` : null;
-
     const producto_existente = await pool.query('SELECT 1 FROM productos WHERE codigo = $1', [codigo]);
     if (producto_existente.rows.length > 0) {
       return res.status(400).json({ error: 'El producto ya existe' });
     }
-
     const result = await pool.query(
       `INSERT INTO productos (codigo, descripcion, ubicacion, stock_maximo, cantidad_stock, precio_compra, proveedor_id, imagen, clave_sat)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8, $9)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)
        RETURNING *`,
       [codigo, descripcion, ubicacion, stock_maximo, cantidad_stock, precio_compra, proveedor_id, imagen, clave_sat]
     );
-
     res.status(201).json(result.rows[0]);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
 
-
-// Editar producto (solo admin_local, si no tiene stock)
 router.put('/:id', isAuthenticated, authorizeRoles('admin'), upload.single('imagen'), async (req, res) => {
   const { id } = req.params;
   const {
@@ -99,7 +91,6 @@ router.put('/:id', isAuthenticated, authorizeRoles('admin'), upload.single('imag
     }
 
     const nuevaImagen = req.file ? `/uploads/${req.file.filename}` : null;
-
     const result = await pool.query(
       `UPDATE productos
        SET codigo=$1, descripcion=$2, ubicacion=$3, stock_maximo=$4, cantidad_stock=$5,
@@ -110,27 +101,19 @@ router.put('/:id', isAuthenticated, authorizeRoles('admin'), upload.single('imag
        RETURNING *`,
       [codigo, descripcion, ubicacion, stock_maximo, cantidad_stock, proveedor_id, precio_compra, nuevaImagen, clave_sat, id]
     );
-
     res.json(result.rows[0]);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
 
-// Eliminar producto (solo admin_local, si no tiene stock)
 router.delete('/:id', isAuthenticated, authorizeRoles('admin'), async (req, res) => {
   const { id } = req.params;
-
   try {
     const check = await pool.query('SELECT cantidad_stock FROM productos WHERE id = $1', [id]);
     if (check.rows.length === 0) return res.status(404).json({ error: 'Producto no encontrado' });
 
-    // if (check.rows[0].cantidad_stock > 0) {
-    //   return res.status(400).json({ error: 'No se puede eliminar productos con stock mayor a 0' });
-    // }
-
-    await pool.query('DELETE FROM productos WHERE id = $1', [id]);
-    // await pool.query('UPDATE productos SET activo = false WHERE id = $1', [id]);
+    await pool.query('UPDATE productos SET activo = false WHERE id = $1', [id]);
     res.json({ message: 'Producto eliminado correctamente' });
   } catch (err) {
     res.status(500).json({ error: err.message });
