@@ -8,7 +8,7 @@ router.get('/', async (req, res) => {
   try {
     const result = await pool.query(`
       SELECT p.id, p.codigo, p.descripcion, p.ubicacion, p.stock_maximo, p.cantidad_stock,
-             p.precio_compra,
+             p.precio_compra, p.stock_minimo,
              GREATEST(p.stock_maximo - p.cantidad_stock, 0) AS stock_faltante,
              COALESCE(p.precio_venta, calc_precio_venta(p.precio_compra)) AS precio_venta,
              pr.nombre AS nombre_proveedor,
@@ -44,7 +44,8 @@ router.post('/', isAuthenticated, authorizeRoles('admin'), upload.single('imagen
     cantidad_stock,
     proveedor_id,
     precio_compra,
-    clave_sat
+    clave_sat,
+    stock_minimo
   } = req.body;
 
   try {
@@ -54,10 +55,10 @@ router.post('/', isAuthenticated, authorizeRoles('admin'), upload.single('imagen
       return res.status(400).json({ error: 'El producto ya existe' });
     }
     const result = await pool.query(
-      `INSERT INTO productos (codigo, descripcion, ubicacion, stock_maximo, cantidad_stock, precio_compra, proveedor_id, imagen, clave_sat)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)
+      `INSERT INTO productos (codigo, descripcion, ubicacion, stock_maximo, cantidad_stock, precio_compra, proveedor_id, imagen, clave_sat, stock_minimo)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
        RETURNING *`,
-      [codigo, descripcion, ubicacion, stock_maximo, cantidad_stock, precio_compra, proveedor_id, imagen, clave_sat]
+      [codigo, descripcion, ubicacion, stock_maximo, cantidad_stock, precio_compra, proveedor_id, imagen, clave_sat, stock_minimo]
     );
     res.status(201).json(result.rows[0]);
   } catch (err) {
@@ -75,7 +76,8 @@ router.put('/:id', isAuthenticated, authorizeRoles('admin'), upload.single('imag
     cantidad_stock,
     proveedor_id,
     precio_compra,
-    clave_sat
+    clave_sat,
+    stock_minimo
   } = req.body;
 
   try {
@@ -94,12 +96,12 @@ router.put('/:id', isAuthenticated, authorizeRoles('admin'), upload.single('imag
     const result = await pool.query(
       `UPDATE productos
        SET codigo=$1, descripcion=$2, ubicacion=$3, stock_maximo=$4, cantidad_stock=$5,
-           proveedor_id=$6, precio_compra=$7,
-           imagen = COALESCE($8, imagen),
-           clave_sat = COALESCE($9, clave_sat)
-       WHERE id=$10
+           proveedor_id=$6, precio_compra=$7, stock_minimo=$8,
+           imagen = COALESCE($9, imagen),
+           clave_sat = COALESCE($10, clave_sat)
+       WHERE id=$11
        RETURNING *`,
-      [codigo, descripcion, ubicacion, stock_maximo, cantidad_stock, proveedor_id, precio_compra, nuevaImagen, clave_sat, id]
+      [codigo, descripcion, ubicacion, stock_maximo, cantidad_stock, proveedor_id, precio_compra, stock_minimo, nuevaImagen, clave_sat, id]
     );
     res.json(result.rows[0]);
   } catch (err) {
