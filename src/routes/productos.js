@@ -11,6 +11,7 @@ router.get('/', async (req, res) => {
              p.precio_compra, p.stock_minimo,
              GREATEST(p.stock_maximo - p.cantidad_stock, 0) AS stock_faltante,
              p.precio_venta AS precio_venta,
+             p.codigo_barras,
              pr.nombre AS nombre_proveedor,
              c.nombre AS nombre_categoria,
              p.imagen, p.activo, p.clave_sat
@@ -40,19 +41,27 @@ router.get('/:id', async (req, res) => {
 router.post('/', isAuthenticated, authorizeRoles('admin'), upload.single('imagen'), async (req, res) => {
   const {
     codigo, descripcion, ubicacion,
-    stock_maximo, cantidad_stock, proveedor_id, categoria_id,
+    stock_maximo, cantidad_stock, proveedor_id, categoria_id, codigo_barras,
     precio_compra, precio_venta, clave_sat, stock_minimo
   } = req.body;
 
-  // Normalizadores
-  const toInt = (v,d=0)=>{const n=Number(v);return Number.isFinite(n)?Math.trunc(n):d};
-  const toNum = (v,d=0)=>{const n=Number(v);return Number.isFinite(n)?n:d};
+  if (codigo_barras) {
+    const dup = await pool.query(
+      'SELECT 1 FROM productos WHERE codigo_barras = $1',
+      [codigo_barras]
+    );
+    if (dup.rowCount) return res.status(400).json({ error: 'El código de barras ya existe' });
+  }
 
-  const _stock_maximo   = toInt(stock_maximo, 0);
+  // Normalizadores
+  const toInt = (v, d = 0) => { const n = Number(v); return Number.isFinite(n) ? Math.trunc(n) : d };
+  const toNum = (v, d = 0) => { const n = Number(v); return Number.isFinite(n) ? n : d };
+
+  const _stock_maximo = toInt(stock_maximo, 0);
   const _cantidad_stock = toInt(cantidad_stock, 0);
-  const _precio_compra  = toNum(precio_compra, 0);
-  const _precio_venta   = toNum(precio_venta, 0);
-  const _stock_minimo   = toInt(stock_minimo, 0);
+  const _precio_compra = toNum(precio_compra, 0);
+  const _precio_venta = toNum(precio_venta, 0);
+  const _stock_minimo = toInt(stock_minimo, 0);
 
   if (!codigo?.trim()) return res.status(400).json({ error: 'codigo es obligatorio' });
   if (!descripcion?.trim()) return res.status(400).json({ error: 'descripcion es obligatoria' });
@@ -66,11 +75,11 @@ router.post('/', isAuthenticated, authorizeRoles('admin'), upload.single('imagen
     const result = await pool.query(
       `INSERT INTO productos
        (codigo, descripcion, ubicacion, stock_maximo, cantidad_stock,
-        precio_compra, proveedor_id, categoria_id, imagen, clave_sat, stock_minimo, precio_venta)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)
+        precio_compra, proveedor_id, categoria_id, codigo_barras, imagen, clave_sat, stock_minimo, precio_venta)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)
        RETURNING *`,
       [codigo, descripcion, ubicacion, _stock_maximo, _cantidad_stock,
-       _precio_compra, proveedor_id, categoria_id, imagen, clave_sat, _stock_minimo, _precio_venta]
+        _precio_compra, proveedor_id, categoria_id, codigo_barras, imagen, clave_sat, _stock_minimo, _precio_venta]
     );
     res.status(201).json(result.rows[0]);
   } catch (err) {
@@ -82,18 +91,26 @@ router.put('/:id', isAuthenticated, authorizeRoles('admin'), upload.single('imag
   const { id } = req.params;
   const {
     codigo, descripcion, ubicacion,
-    stock_maximo, cantidad_stock, proveedor_id, categoria_id,
+    stock_maximo, cantidad_stock, proveedor_id, categoria_id, codigo_barras,
     precio_compra, precio_venta, clave_sat, stock_minimo
   } = req.body;
 
-  const toInt = (v,d=0)=>{const n=Number(v);return Number.isFinite(n)?Math.trunc(n):d};
-  const toNum = (v,d=0)=>{const n=Number(v);return Number.isFinite(n)?n:d};
+  if (codigo_barras) {
+    const dup = await pool.query(
+      'SELECT 1 FROM productos WHERE codigo_barras = $1 AND id <> $2',
+      [codigo_barras, id]
+    );
+    if (dup.rowCount) return res.status(400).json({ error: 'El código de barras ya existe' });
+  }
 
-  const _stock_maximo   = toInt(stock_maximo, 0);
+  const toInt = (v, d = 0) => { const n = Number(v); return Number.isFinite(n) ? Math.trunc(n) : d };
+  const toNum = (v, d = 0) => { const n = Number(v); return Number.isFinite(n) ? n : d };
+
+  const _stock_maximo = toInt(stock_maximo, 0);
   const _cantidad_stock = toInt(cantidad_stock, 0);
-  const _precio_compra  = toNum(precio_compra, 0);
-  const _precio_venta   = toNum(precio_venta, 0);
-  const _stock_minimo   = toInt(stock_minimo, 0);
+  const _precio_compra = toNum(precio_compra, 0);
+  const _precio_venta = toNum(precio_venta, 0);
+  const _stock_minimo = toInt(stock_minimo, 0);
 
   if (_precio_venta < 0) return res.status(400).json({ error: 'precio_venta no puede ser negativo' });
 
@@ -108,15 +125,15 @@ router.put('/:id', isAuthenticated, authorizeRoles('admin'), upload.single('imag
     const result = await pool.query(
       `UPDATE productos
        SET codigo=$1, descripcion=$2, ubicacion=$3, stock_maximo=$4, cantidad_stock=$5,
-           proveedor_id=$6, categoria_id=$7, precio_compra=$8, stock_minimo=$9,
-           imagen = COALESCE($10, imagen),
-           clave_sat = COALESCE($11, clave_sat),
-           precio_venta = COALESCE($12, precio_venta)
-       WHERE id=$13
+           proveedor_id=$6, categoria_id=$7, precio_compra=$8, codigo_barras=$9, stock_minimo=$10,
+           imagen = COALESCE($11, imagen),
+           clave_sat = COALESCE($12, clave_sat),
+           precio_venta = COALESCE($13, precio_venta)
+       WHERE id=$14
        RETURNING *`,
       [codigo, descripcion, ubicacion, _stock_maximo, _cantidad_stock,
-       proveedor_id, categoria_id, _precio_compra, _stock_minimo,
-       nuevaImagen, clave_sat, _precio_venta, id]
+        proveedor_id, categoria_id, _precio_compra, codigo_barras, _stock_minimo,
+        nuevaImagen, clave_sat, _precio_venta, id]
     );
     res.json(result.rows[0]);
   } catch (err) {
