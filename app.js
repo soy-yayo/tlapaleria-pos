@@ -11,6 +11,7 @@ const rangosRoutes = require('./src/routes/rangos');
 const path = require('path');
 const cotizacionesRoutes = require('./src/routes/cotizaciones');
 const categoriasRoutes = require('./src/routes/categorias');
+const inventarioRoutes = require('./src/routes/inventario');
 
 const app = express();
 app.use(cors());
@@ -26,6 +27,7 @@ app.use('/api/reportes', reportesRoute);
 app.use('/api/rangos', rangosRoutes);
 app.use('/api/cotizaciones', cotizacionesRoutes);
 app.use('/api/categorias', categoriasRoutes);
+app.use('/api/inventario', inventarioRoutes);
 
 app.get('/', (req, res) => res.send('API funcionando'));
 
