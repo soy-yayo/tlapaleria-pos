@@ -12,24 +12,39 @@ router.post('/entradas', isAuthenticated, authorizeRoles('admin'), async (req, r
   try {
     await pool.query('BEGIN');
 
-    // Opcional: devolver filas actualizadas
     const updated = [];
 
-    for (const { id, cantidad } of entradas) {
+    for (const { id, cantidad, precio_compra, precio_venta } of entradas) {
       const cant = Number(cantidad);
       const pid = Number(id);
+      const precioCompra = precio_compra !== undefined ? Number(precio_compra) : null;
+      const precioVenta = precio_venta !== undefined ? Number(precio_venta) : null;
+
       if (!Number.isFinite(cant) || cant <= 0 || !Number.isFinite(pid)) {
         await pool.query('ROLLBACK');
         return res.status(400).json({ error: 'Datos inválidos en entradas' });
       }
 
+      if (precioCompra !== null && !Number.isFinite(precioCompra)) {
+        await pool.query('ROLLBACK');
+        return res.status(400).json({ error: 'Precio de compra inválido' });
+      }
+
+      if (precioVenta !== null && !Number.isFinite(precioVenta)) {
+        await pool.query('ROLLBACK');
+        return res.status(400).json({ error: 'Precio de venta inválido' });
+      }
+
       const r = await pool.query(
         `UPDATE productos
-           SET cantidad_stock = GREATEST(cantidad_stock + $2, 0)
+           SET cantidad_stock = GREATEST(cantidad_stock + $2, 0),
+               precio_compra = COALESCE($3, precio_compra),
+               precio_venta = COALESCE($4, precio_venta)
          WHERE id = $1 AND activo = TRUE
-         RETURNING id, descripcion, cantidad_stock`,
-        [pid, cant]
+         RETURNING id, descripcion, cantidad_stock, precio_compra, precio_venta`,
+        [pid, cant, precioCompra, precioVenta]
       );
+
       if (r.rowCount === 0) {
         await pool.query('ROLLBACK');
         return res.status(404).json({ error: `Producto ${pid} no encontrado o inactivo` });
